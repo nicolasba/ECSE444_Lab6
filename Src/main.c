@@ -89,21 +89,6 @@ int fgetc(FILE *f) {
     while (HAL_OK != HAL_UART_Receive(&huart1, (uint8_t *)&ch, 1, 30000));
     return ch;
 }
-/**
- * @brief  This function is executed in case of error occurrence.
- * @param  file: The file name as string.
- * @param  line: The line in file as a number.
- * @retval None
- */
-void _Error_Handler(char *file, int line)
-{
-    /* USER CODE BEGIN Error_Handler_Debug */
-    /* User can add his own implementation to report the HAL error return state */
-    while(1)
-    {
-    }
-    /* USER CODE END Error_Handler_Debug */
-}
 
 /* USER CODE END 0 */
 
@@ -144,7 +129,7 @@ int main(void)
     /* USER CODE BEGIN 2 */
     HAL_DAC_Start(&hdac1, DAC_CHANNEL_1);
     HAL_DAC_Start(&hdac1, DAC_CHANNEL_2);
-		MX_TIM2_Init();
+		//MX_TIM2_Init();
 		
 		
 		
@@ -159,20 +144,35 @@ int main(void)
 		HAL_DFSDM_FilterRegularStart_IT(&hdfsdm1_filter0);
 		HAL_DFSDM_FilterRegularStart_IT(&hdfsdm1_filter1);
 		
-		HAL_TIM_Base_Start_IT(&htim2);
+		//HAL_TIM_Base_Start_IT(&htim2);
 
     while (1)
     {
-        if(flt0Flag ==1){
-					flt0Result = HAL_DFSDM_FilterGetRegularValue(&hdfsdm1_filter0,(uint32_t *)1);
+				uint32_t channel0 = 1;
+				uint32_t channel1 = 1;
+				FILE *f;
+			
+				//HAL_Delay(50);
+				fputc('c', f);
+				fputc('\n', f);
+       
+				if(flt0Flag ==1){
+					fputc('a', f);
+					fputc('\n', f);
+					//flt0Flag = 0;
+					flt0Result = HAL_DFSDM_FilterGetRegularValue(&hdfsdm1_filter0, &channel0);
 					HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_1,DAC_ALIGN_12B_R,flt0Result);
 				}
-				
+			
 				if(flt1Flag ==1){
-					flt1Result = HAL_DFSDM_FilterGetRegularValue(&hdfsdm1_filter1,(uint32_t *)2);//Channel 2?
+					fputc('b', f);
+					fputc('\n', f);
+					//flt1Flag = 0;
+					flt1Result = HAL_DFSDM_FilterGetRegularValue(&hdfsdm1_filter1, &channel1);//Channel 2?
 					HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_2,DAC_ALIGN_12B_R,flt1Result);
 					
 				}
+				
 
     }
     /* USER CODE END 3 */
@@ -229,7 +229,7 @@ void SystemClock_Config(void)
     PeriphClkInit.Dfsdm1ClockSelection = RCC_DFSDM1CLKSOURCE_PCLK;
     PeriphClkInit.PLLSAI1.PLLSAI1Source = RCC_PLLSOURCE_MSI;
     PeriphClkInit.PLLSAI1.PLLSAI1M = 1;
-    PeriphClkInit.PLLSAI1.PLLSAI1N = 32;
+    PeriphClkInit.PLLSAI1.PLLSAI1N = 70;
     PeriphClkInit.PLLSAI1.PLLSAI1P = RCC_PLLP_DIV7;
     PeriphClkInit.PLLSAI1.PLLSAI1Q = RCC_PLLQ_DIV2;
     PeriphClkInit.PLLSAI1.PLLSAI1R = RCC_PLLR_DIV2;
@@ -300,13 +300,15 @@ static void MX_DFSDM1_Init(void)
 		
 		__HAL_RCC_DFSDM1_CLK_ENABLE();//tutorial 
 	
-    hdfsdm1_filter0.Instance = DFSDM1_Filter0;
+		hdfsdm1_filter0.Instance = DFSDM1_Filter0;
     hdfsdm1_filter0.Init.RegularParam.Trigger = DFSDM_FILTER_SW_TRIGGER;
     hdfsdm1_filter0.Init.RegularParam.FastMode = ENABLE;
     hdfsdm1_filter0.Init.RegularParam.DmaMode = DISABLE;
     hdfsdm1_filter0.Init.FilterParam.SincOrder = DFSDM_FILTER_SINC4_ORDER;
-    hdfsdm1_filter0.Init.FilterParam.Oversampling = 128; 											// tutorial
+    hdfsdm1_filter0.Init.FilterParam.Oversampling = 128; 											// = mic freq (2MHz) / output freq (16kHz)
     hdfsdm1_filter0.Init.FilterParam.IntOversampling = 1;
+		
+		//HAL_DFSDM_FilterMspInit(&hdfsdm1_filter0);
     if (HAL_DFSDM_FilterInit(&hdfsdm1_filter0) != HAL_OK)
     {
         _Error_Handler(__FILE__, __LINE__);
@@ -317,8 +319,10 @@ static void MX_DFSDM1_Init(void)
     hdfsdm1_filter1.Init.RegularParam.FastMode = ENABLE;
     hdfsdm1_filter1.Init.RegularParam.DmaMode = DISABLE;
     hdfsdm1_filter1.Init.FilterParam.SincOrder = DFSDM_FILTER_SINC4_ORDER;
-    hdfsdm1_filter1.Init.FilterParam.Oversampling = 128;												//??
+    hdfsdm1_filter1.Init.FilterParam.Oversampling = 128;												
     hdfsdm1_filter1.Init.FilterParam.IntOversampling = 1;
+		
+		//HAL_DFSDM_FilterMspInit(&hdfsdm1_filter1);
     if (HAL_DFSDM_FilterInit(&hdfsdm1_filter1) != HAL_OK)
     {
         _Error_Handler(__FILE__, __LINE__);
@@ -326,8 +330,8 @@ static void MX_DFSDM1_Init(void)
 
     hdfsdm1_channel1.Instance = DFSDM1_Channel1;
     hdfsdm1_channel1.Init.OutputClock.Activation = ENABLE;
-    hdfsdm1_channel1.Init.OutputClock.Selection = DFSDM_CHANNEL_OUTPUT_CLOCK_AUDIO;
-    hdfsdm1_channel1.Init.OutputClock.Divider = 32; //The clock divider value must respect the following formula: 
+    hdfsdm1_channel1.Init.OutputClock.Selection = DFSDM_CHANNEL_OUTPUT_CLOCK_AUDIO;		//SAI1 clk  = 40 MHz
+    hdfsdm1_channel1.Init.OutputClock.Divider = 20; //The clock divider value must respect the following formula: 
 																											//Divider = DFSDM Clock Source / (AUDIO_SAMPLING_FREQUENCY ×DECIAMTION_FACTOR)
 																											//samp freeq = 16kHz, clcok source = , decimation factor = FOSR = 128
     hdfsdm1_channel1.Init.Input.Multiplexer = DFSDM_CHANNEL_EXTERNAL_INPUTS;
@@ -337,7 +341,7 @@ static void MX_DFSDM1_Init(void)
     hdfsdm1_channel1.Init.SerialInterface.SpiClock = DFSDM_CHANNEL_SPI_CLOCK_INTERNAL;
     hdfsdm1_channel1.Init.Awd.FilterOrder = DFSDM_CHANNEL_FASTSINC_ORDER;
     hdfsdm1_channel1.Init.Awd.Oversampling = 1;
-    hdfsdm1_channel1.Init.Offset = 0; 								//??? Interfacing PDM doc, pg 59
+    hdfsdm1_channel1.Init.Offset = 0; 								//Interfacing PDM doc, pg 59
     hdfsdm1_channel1.Init.RightBitShift = 0xC;				//Interfacing PDM doc, pg 59 ; want 12 bit dac? 24 bit reg-> 12, shift 12 (0xC)
     if (HAL_DFSDM_ChannelInit(&hdfsdm1_channel1) != HAL_OK)
     {
@@ -347,7 +351,7 @@ static void MX_DFSDM1_Init(void)
     hdfsdm1_channel2.Instance = DFSDM1_Channel2;
     hdfsdm1_channel2.Init.OutputClock.Activation = ENABLE;
     hdfsdm1_channel2.Init.OutputClock.Selection = DFSDM_CHANNEL_OUTPUT_CLOCK_AUDIO;
-    hdfsdm1_channel2.Init.OutputClock.Divider = 32;//??
+    hdfsdm1_channel2.Init.OutputClock.Divider = 20;
     hdfsdm1_channel2.Init.Input.Multiplexer = DFSDM_CHANNEL_EXTERNAL_INPUTS;
     hdfsdm1_channel2.Init.Input.DataPacking = DFSDM_CHANNEL_STANDARD_MODE;
     hdfsdm1_channel2.Init.Input.Pins = DFSDM_CHANNEL_SAME_CHANNEL_PINS;
@@ -355,7 +359,7 @@ static void MX_DFSDM1_Init(void)
     hdfsdm1_channel2.Init.SerialInterface.SpiClock = DFSDM_CHANNEL_SPI_CLOCK_INTERNAL;
     hdfsdm1_channel2.Init.Awd.FilterOrder = DFSDM_CHANNEL_FASTSINC_ORDER;
     hdfsdm1_channel2.Init.Awd.Oversampling = 1;
-    hdfsdm1_channel2.Init.Offset = 0;//??Interfacing PDM doc, pg 59
+    hdfsdm1_channel2.Init.Offset = 0;//Interfacing PDM doc, pg 59
     hdfsdm1_channel2.Init.RightBitShift = 0xC;//??Interfacing PDM doc, pg 59
     if (HAL_DFSDM_ChannelInit(&hdfsdm1_channel2) != HAL_OK)
     {
@@ -409,10 +413,9 @@ static void MX_GPIO_Init(void)
 		GPIO_InitTypeDef GPIO_InitStruct;
 	
     /* GPIO Ports Clock Enable */
-    __HAL_RCC_GPIOA_CLK_ENABLE();
     __HAL_RCC_GPIOE_CLK_ENABLE();
     __HAL_RCC_GPIOB_CLK_ENABLE();
-
+		__HAL_RCC_GPIOC_CLK_ENABLE();
 	
 				/*Configure GPIO pin Output Level */
 		HAL_GPIO_WritePin(GPIOB, GPIO_PIN_14, GPIO_PIN_RESET);
@@ -427,7 +430,7 @@ static void MX_GPIO_Init(void)
 		HAL_GPIO_Init(GPIOE, &GPIO_InitStruct);
 		
 		//??
-		/*Configure GPIO pin : PE9 (DFSDM1_CKOUT)*/
+		/*Configure GPIO pin : PC2 (DFSDM1_CKOUT)*/
 		GPIO_InitStruct.Pin = GPIO_PIN_2;
 		GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;//Alternate mode
 		GPIO_InitStruct.Pull = GPIO_NOPULL;
@@ -459,7 +462,7 @@ static void MX_TIM2_Init(void)
   htim2.Instance = TIM2;
   htim2.Init.Prescaler = 999;
   htim2.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim2.Init.Period = 10;
+  htim2.Init.Period = 5;
   htim2.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim2.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_DISABLE;
   if (HAL_TIM_Base_Init(&htim2) != HAL_OK)
@@ -483,6 +486,22 @@ static void MX_TIM2_Init(void)
 
 }
 /* USER CODE END 4 */
+
+/**
+ * @brief  This function is executed in case of error occurrence.
+ * @param  file: The file name as string.
+ * @param  line: The line in file as a number.
+ * @retval None
+ */
+void _Error_Handler(char *file, int line)
+{
+    /* USER CODE BEGIN Error_Handler_Debug */
+    /* User can add his own implementation to report the HAL error return state */
+    while(1)
+    {
+    }
+    /* USER CODE END Error_Handler_Debug */
+}
 
 
 

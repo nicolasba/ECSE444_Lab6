@@ -60,6 +60,7 @@ extern DFSDM_Filter_HandleTypeDef hdfsdm1_filter0;
 extern DFSDM_Filter_HandleTypeDef hdfsdm1_filter1;
 extern TIM_HandleTypeDef htim2;
 extern UART_HandleTypeDef huart1;
+extern DAC_HandleTypeDef hdac1;
 /* USER CODE BEGIN EV */
 int timFlag;
 int flt0Flag;
@@ -237,11 +238,13 @@ void USART1_IRQHandler(void)
 void DFSDM1_FLT0_IRQHandler(void)
 {
   /* USER CODE BEGIN DFSDM1_FLT0_IRQn 0 */
-
+	//uint32_t chan;
   /* USER CODE END DFSDM1_FLT0_IRQn 0 */
   HAL_DFSDM_IRQHandler(&hdfsdm1_filter0);
+	flt0Flag = 1;
   /* USER CODE BEGIN DFSDM1_FLT0_IRQn 1 */
-	flt0Flag =1;
+	//int32_t flt0 = HAL_DFSDM_FilterGetRegularValue(&hdfsdm1_filter0, &chan);
+	//HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_1,DAC_ALIGN_12B_R,flt0);
 
   /* USER CODE END DFSDM1_FLT0_IRQn 1 */
 }
@@ -252,11 +255,13 @@ void DFSDM1_FLT0_IRQHandler(void)
 void DFSDM1_FLT1_IRQHandler(void)
 {
   /* USER CODE BEGIN DFSDM1_FLT1_IRQn 0 */
-
-  /* USER CODE END DFSDM1_FLT1_IRQn 0 */
+	//uint32_t chan;
+  /* USER CODE END DFSDM1_FLT0_IRQn 0 */
   HAL_DFSDM_IRQHandler(&hdfsdm1_filter1);
-  /* USER CODE BEGIN DFSDM1_FLT1_IRQn 1 */
-	flt1Flag =1;
+	flt1Flag = 1;
+  /* USER CODE BEGIN DFSDM1_FLT0_IRQn 1 */
+	//int32_t flt1 = HAL_DFSDM_FilterGetRegularValue(&hdfsdm1_filter1, &chan);
+	//HAL_DAC_SetValue(&hdac1,DAC_CHANNEL_2,DAC_ALIGN_12B_R,flt1);
 
   /* USER CODE END DFSDM1_FLT1_IRQn 1 */
 }
