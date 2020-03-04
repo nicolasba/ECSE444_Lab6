@@ -16,8 +16,8 @@
     [..]
          (+) Enable CRC AHB clock using __HAL_RCC_CRC_CLK_ENABLE();
          (+) Initialize CRC calculator
-             (++) specify generating polynomial (peripheral default or non-default one)
-             (++) specify initialization value (peripheral default or non-default one)
+             (++) specify generating polynomial (IP default or non-default one)
+             (++) specify initialization value (IP default or non-default one)
              (++) specify input data format
              (++) specify input or output data inversion mode if any
          (+) Use HAL_CRC_Accumulate() function to compute the CRC value of the
@@ -31,13 +31,29 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
   */
@@ -126,13 +142,13 @@ HAL_StatusTypeDef HAL_CRC_Init(CRC_HandleTypeDef *hcrc)
   assert_param(IS_DEFAULT_POLYNOMIAL(hcrc->Init.DefaultPolynomialUse));
   if (hcrc->Init.DefaultPolynomialUse == DEFAULT_POLYNOMIAL_ENABLE)
   {
-    /* initialize peripheral with default generating polynomial */
+    /* initialize IP with default generating polynomial */
     WRITE_REG(hcrc->Instance->POL, DEFAULT_CRC32_POLY);
     MODIFY_REG(hcrc->Instance->CR, CRC_CR_POLYSIZE, CRC_POLYLENGTH_32B);
   }
   else
   {
-    /* initialize CRC peripheral with generating polynomial defined by user */
+    /* initialize CRC IP with generating polynomial defined by user */
     if (HAL_CRCEx_Polynomial_Set(hcrc, hcrc->Init.GeneratingPolynomial, hcrc->Init.CRCLength) != HAL_OK)
     {
       return HAL_ERROR;
@@ -289,6 +305,9 @@ uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_
   uint32_t index;      /* CRC input data buffer index */
   uint32_t temp = 0U;  /* CRC output (read from hcrc->Instance->DR register) */
 
+  /* Process locked */
+  __HAL_LOCK(hcrc);
+
   /* Change CRC peripheral state */
   hcrc->State = HAL_CRC_STATE_BUSY;
 
@@ -308,7 +327,7 @@ uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_
       break;
 
     case CRC_INPUTDATA_FORMAT_HALFWORDS:
-      temp = CRC_Handle_16(hcrc, (uint16_t *)(void *)pBuffer, BufferLength);    /* Derogation MisraC2012 R.11.5 */
+      temp = CRC_Handle_16(hcrc, (uint16_t *)pBuffer, BufferLength);
       break;
     default:
       break;
@@ -316,6 +335,9 @@ uint32_t HAL_CRC_Accumulate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_
 
   /* Change CRC peripheral state */
   hcrc->State = HAL_CRC_STATE_READY;
+
+  /* Process unlocked */
+  __HAL_UNLOCK(hcrc);
 
   /* Return the CRC computed value */
   return temp;
@@ -340,6 +362,9 @@ uint32_t HAL_CRC_Calculate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t
 {
   uint32_t index;      /* CRC input data buffer index */
   uint32_t temp = 0U;  /* CRC output (read from hcrc->Instance->DR register) */
+
+  /* Process locked */
+  __HAL_LOCK(hcrc);
 
   /* Change CRC peripheral state */
   hcrc->State = HAL_CRC_STATE_BUSY;
@@ -366,7 +391,7 @@ uint32_t HAL_CRC_Calculate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t
 
     case CRC_INPUTDATA_FORMAT_HALFWORDS:
       /* Specific 16-bit input data handling  */
-      temp = CRC_Handle_16(hcrc, (uint16_t *)(void *)pBuffer, BufferLength);    /* Derogation MisraC2012 R.11.5 */
+      temp = CRC_Handle_16(hcrc, (uint16_t *)pBuffer, BufferLength);
       break;
 
     default:
@@ -375,6 +400,9 @@ uint32_t HAL_CRC_Calculate(CRC_HandleTypeDef *hcrc, uint32_t pBuffer[], uint32_t
 
   /* Change CRC peripheral state */
   hcrc->State = HAL_CRC_STATE_READY;
+
+  /* Process unlocked */
+  __HAL_UNLOCK(hcrc);
 
   /* Return the CRC computed value */
   return temp;
@@ -437,34 +465,34 @@ static uint32_t CRC_Handle_8(CRC_HandleTypeDef *hcrc, uint8_t pBuffer[], uint32_
 
   /* Processing time optimization: 4 bytes are entered in a row with a single word write,
    * last bytes must be carefully fed to the CRC calculator to ensure a correct type
-   * handling by the peripheral */
+   * handling by the IP */
   for (i = 0U; i < (BufferLength / 4U); i++)
   {
     hcrc->Instance->DR = ((uint32_t)pBuffer[4U * i] << 24U) | \
-                         ((uint32_t)pBuffer[(4U * i) + 1U] << 16U) | \
-                         ((uint32_t)pBuffer[(4U * i) + 2U] << 8U)  | \
-                         (uint32_t)pBuffer[(4U * i) + 3U];
+                         ((uint32_t)pBuffer[4U * i + 1U] << 16U) | \
+                         ((uint32_t)pBuffer[4U * i + 2U] << 8U)  | \
+                         (uint32_t)pBuffer[4U * i + 3U];
   }
   /* last bytes specific handling */
   if ((BufferLength % 4U) != 0U)
   {
-    if ((BufferLength % 4U) == 1U)
+    if (BufferLength % 4U == 1U)
     {
-      *(__IO uint8_t *)(__IO void *)(&hcrc->Instance->DR) = pBuffer[4U * i];         /* Derogation MisraC2012 R.11.5 */
+      *(__IO uint8_t *)(__IO void *)(&hcrc->Instance->DR) = pBuffer[4U * i];
     }
-    if ((BufferLength % 4U) == 2U)
+    if (BufferLength % 4U == 2U)
     {
-      data = ((uint16_t)(pBuffer[4U * i]) << 8U) | (uint16_t)pBuffer[(4U * i) + 1U];
-      pReg = (__IO uint16_t *)(__IO void *)(&hcrc->Instance->DR);                    /* Derogation MisraC2012 R.11.5 */
+      data = (uint16_t)(pBuffer[4U * i] << 8U) | (uint16_t)pBuffer[4U * i + 1U];
+      pReg = (__IO uint16_t *)(__IO void *)(&hcrc->Instance->DR);
       *pReg = data;
     }
-    if ((BufferLength % 4U) == 3U)
+    if (BufferLength % 4U == 3U)
     {
-      data = ((uint16_t)(pBuffer[4U * i]) << 8U) | (uint16_t)pBuffer[(4U * i) + 1U];
-      pReg = (__IO uint16_t *)(__IO void *)(&hcrc->Instance->DR);                    /* Derogation MisraC2012 R.11.5 */
+      data = (uint16_t)(pBuffer[4U * i] << 8U) | (uint16_t)pBuffer[4U * i + 1U];
+      pReg = (__IO uint16_t *)(__IO void *)(&hcrc->Instance->DR);
       *pReg = data;
 
-      *(__IO uint8_t *)(__IO void *)(&hcrc->Instance->DR) = pBuffer[(4U * i) + 2U];  /* Derogation MisraC2012 R.11.5 */
+      *(__IO uint8_t *)(__IO void *)(&hcrc->Instance->DR) = pBuffer[4U * i + 2U];
     }
   }
 
@@ -487,14 +515,14 @@ static uint32_t CRC_Handle_16(CRC_HandleTypeDef *hcrc, uint16_t pBuffer[], uint3
 
   /* Processing time optimization: 2 HalfWords are entered in a row with a single word write,
    * in case of odd length, last HalfWord must be carefully fed to the CRC calculator to ensure
-   * a correct type handling by the peripheral */
+   * a correct type handling by the IP */
   for (i = 0U; i < (BufferLength / 2U); i++)
   {
-    hcrc->Instance->DR = ((uint32_t)pBuffer[2U * i] << 16U) | (uint32_t)pBuffer[(2U * i) + 1U];
+    hcrc->Instance->DR = ((uint32_t)pBuffer[2U * i] << 16U) | (uint32_t)pBuffer[2U * i + 1U];
   }
   if ((BufferLength % 2U) != 0U)
   {
-    pReg = (__IO uint16_t *)(__IO void *)(&hcrc->Instance->DR);                 /* Derogation MisraC2012 R.11.5 */
+    pReg = (__IO uint16_t *)(__IO void *)(&hcrc->Instance->DR);
     *pReg = pBuffer[2U * i];
   }
 

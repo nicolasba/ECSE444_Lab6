@@ -33,21 +33,16 @@
                 e.g. HAL_HASHEx_xxx_Start_DMA(). Note that in DMA mode, a call to
                 HAL_HASHEx_xxx_Finish() is then required to retrieve the digest.
 
-   (#)Multi-buffer processing is possible in polling, interrupt and DMA modes.
+   (#)Multi-buffer processing is possible in polling and DMA mode.
         (##) In polling mode, only multi-buffer HASH processing is possible.
              API HAL_HASHEx_xxx_Accumulate() must be called for each input buffer, except for the last one.
              User must resort to HAL_HASHEx_xxx_Start() to enter the last one and retrieve as
              well the computed digest.
 
-        (##) In interrupt mode, API HAL_HASHEx_xxx_Accumulate_IT() must be called for each input buffer, 
-             except for the last one.
-             User must resort to HAL_HASHEx_xxx_Start_IT() to enter the last one and retrieve as
-             well the computed digest.
-
         (##) In DMA mode, multi-buffer HASH and HMAC processing are possible.
 
               (+++) HASH processing: once initialization is done, MDMAT bit must be set thru __HAL_HASH_SET_MDMAT() macro.
-             From that point, each buffer can be fed to the Peripheral thru HAL_HASHEx_xxx_Start_DMA() API.
+             From that point, each buffer can be fed to the IP thru HAL_HASHEx_xxx_Start_DMA() API.
              Before entering the last buffer, reset the MDMAT bit with __HAL_HASH_RESET_MDMAT()
              macro then wrap-up the HASH processing in feeding the last input buffer thru the
              same API HAL_HASHEx_xxx_Start_DMA(). The digest can then be retrieved with a call to
@@ -55,7 +50,7 @@
 
              (+++) HMAC processing (MD-5, SHA-1, SHA-224 and SHA-256 must all resort to
              extended functions): after initialization, the key and the first input buffer are entered
-             in the Peripheral with the API HAL_HMACEx_xxx_Step1_2_DMA(). This carries out HMAC step 1 and
+             in the IP with the API HAL_HMACEx_xxx_Step1_2_DMA(). This carries out HMAC step 1 and
              starts step 2.
              The following buffers are next entered with the API  HAL_HMACEx_xxx_Step2_DMA(). At this
              point, the HMAC processing is still carrying out step 2.
@@ -70,13 +65,29 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
   */
@@ -84,27 +95,27 @@
 /* Includes ------------------------------------------------------------------*/
 #include "stm32l4xx_hal.h"
 
+#ifdef HAL_HASH_MODULE_ENABLED
 
-
+#if defined (STM32L4A6xx) || defined (STM32L4S5xx) || defined (STM32L4S7xx) || defined (STM32L4S9xx)
 
 /** @addtogroup STM32L4xx_HAL_Driver
   * @{
   */
-#if defined (HASH)
 
 /** @defgroup HASHEx HASHEx
   * @brief HASH HAL extended module driver.
   * @{
   */
-#ifdef HAL_HASH_MODULE_ENABLED
+
 /* Private typedef -----------------------------------------------------------*/
 /* Private define ------------------------------------------------------------*/
 /* Private functions ---------------------------------------------------------*/
-#if defined (HASH_CR_MDMAT)
 
 /** @defgroup HASHEx_Exported_Functions HASH Extended Exported Functions
   * @{
   */
+
 
 /** @defgroup HASHEx_Exported_Functions_Group1 HASH extended processing functions in polling mode
  *  @brief   HASH extended processing functions using polling mode.
@@ -125,7 +136,7 @@
     [..] For a single buffer to be hashed, user can resort to HAL_HASH_xxx_Start().
 
     [..]  In case of multi-buffer HASH processing (a single digest is computed while
-          several buffers are fed to the Peripheral), the user can resort to successive calls
+          several buffers are fed to the IP), the user can resort to successive calls
           to HAL_HASHEx_xxx_Accumulate() and wrap-up the digest computation by a call
           to HAL_HASHEx_xxx_Start().
 
@@ -154,14 +165,14 @@ HAL_StatusTypeDef HAL_HASHEx_SHA224_Start(HASH_HandleTypeDef *hhash, uint8_t *pI
   * @brief  If not already done, initialize the HASH peripheral in SHA224 mode then
   *         processes pInBuffer.
   * @note   Consecutive calls to HAL_HASHEx_SHA224_Accumulate() can be used to feed
-  *         several input buffers back-to-back to the Peripheral that will yield a single
+  *         several input buffers back-to-back to the IP that will yield a single
   *         HASH signature once all buffers have been entered. Wrap-up of input
   *         buffers feeding and retrieval of digest is done by a call to
   *         HAL_HASHEx_SHA224_Start().
   * @note   Field hhash->Phase of HASH handle is tested to check whether or not
-  *         the Peripheral has already been initialized.
+  *         the IP has already been initialized.
   * @note   Digest is not retrieved by this API, user must resort to HAL_HASHEx_SHA224_Start()
-  *         to read it, feeding at the same time the last input buffer to the Peripheral.
+  *         to read it, feeding at the same time the last input buffer to the IP.
   * @note   The input buffer size (in bytes) must be a multiple of 4 otherwise, the
   *         HASH digest computation is corrupted. Only HAL_HASHEx_SHA224_Start() is able
   *         to manage the ending buffer with a length in bytes not a multiple of 4.
@@ -195,14 +206,14 @@ HAL_StatusTypeDef HAL_HASHEx_SHA256_Start(HASH_HandleTypeDef *hhash, uint8_t *pI
   * @brief  If not already done, initialize the HASH peripheral in SHA256 mode then
   *         processes pInBuffer.
   * @note   Consecutive calls to HAL_HASHEx_SHA256_Accumulate() can be used to feed
-  *         several input buffers back-to-back to the Peripheral that will yield a single
+  *         several input buffers back-to-back to the IP that will yield a single
   *         HASH signature once all buffers have been entered. Wrap-up of input
   *         buffers feeding and retrieval of digest is done by a call to
   *         HAL_HASHEx_SHA256_Start().
   * @note   Field hhash->Phase of HASH handle is tested to check whether or not
-  *         the Peripheral has already been initialized.
+  *         the IP has already been initialized.
   * @note   Digest is not retrieved by this API, user must resort to HAL_HASHEx_SHA256_Start()
-  *         to read it, feeding at the same time the last input buffer to the Peripheral.
+  *         to read it, feeding at the same time the last input buffer to the IP.
   * @note   The input buffer size (in bytes) must be a multiple of 4 otherwise, the
   *         HASH digest computation is corrupted. Only HAL_HASHEx_SHA256_Start() is able
   *         to manage the ending buffer with a length in bytes not a multiple of 4.
@@ -256,29 +267,6 @@ HAL_StatusTypeDef HAL_HASHEx_SHA224_Start_IT(HASH_HandleTypeDef *hhash, uint8_t 
 }
 
 /**
-  * @brief  If not already done, initialize the HASH peripheral in SHA224 mode then
-  *         processes pInBuffer in interruption mode.
-  * @note   Consecutive calls to HAL_HASHEx_SHA224_Accumulate_IT() can be used to feed
-  *         several input buffers back-to-back to the Peripheral that will yield a single
-  *         HASH signature once all buffers have been entered. Wrap-up of input
-  *         buffers feeding and retrieval of digest is done by a call to
-  *         HAL_HASHEx_SHA224_Start_IT().
-  * @note   Field hhash->Phase of HASH handle is tested to check whether or not
-  *         the Peripheral has already been initialized.
-  * @note   The input buffer size (in bytes) must be a multiple of 4 otherwise, the
-  *         HASH digest computation is corrupted. Only HAL_HASHEx_SHA224_Start_IT() is able
-  *         to manage the ending buffer with a length in bytes not a multiple of 4.
-  * @param  hhash: HASH handle.
-  * @param  pInBuffer: pointer to the input buffer (buffer to be hashed).
-  * @param  Size: length of the input buffer in bytes, must be a multiple of 4.
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_HASHEx_SHA224_Accumulate_IT(HASH_HandleTypeDef *hhash, uint8_t *pInBuffer, uint32_t Size)
-{
-  return  HASH_Accumulate_IT(hhash, pInBuffer, Size,HASH_ALGOSELECTION_SHA224);
-}
-
-/**
   * @brief  Initialize the HASH peripheral in SHA256 mode, next process pInBuffer then
   *         read the computed digest in interruption mode.
   * @note   Digest is available in pOutBuffer.
@@ -291,29 +279,6 @@ HAL_StatusTypeDef HAL_HASHEx_SHA224_Accumulate_IT(HASH_HandleTypeDef *hhash, uin
 HAL_StatusTypeDef HAL_HASHEx_SHA256_Start_IT(HASH_HandleTypeDef *hhash, uint8_t *pInBuffer, uint32_t Size, uint8_t* pOutBuffer)
 {
   return HASH_Start_IT(hhash, pInBuffer, Size, pOutBuffer,HASH_ALGOSELECTION_SHA256);
-}
-
-/**
-  * @brief  If not already done, initialize the HASH peripheral in SHA256 mode then
-  *         processes pInBuffer in interruption mode.
-  * @note   Consecutive calls to HAL_HASHEx_SHA256_Accumulate_IT() can be used to feed
-  *         several input buffers back-to-back to the Peripheral that will yield a single
-  *         HASH signature once all buffers have been entered. Wrap-up of input
-  *         buffers feeding and retrieval of digest is done by a call to
-  *         HAL_HASHEx_SHA256_Start_IT().
-  * @note   Field hhash->Phase of HASH handle is tested to check whether or not
-  *         the Peripheral has already been initialized.
-  * @note   The input buffer size (in bytes) must be a multiple of 4 otherwise, the
-  *         HASH digest computation is corrupted. Only HAL_HASHEx_SHA256_Start_IT() is able
-  *         to manage the ending buffer with a length in bytes not a multiple of 4.
-  * @param  hhash: HASH handle.
-  * @param  pInBuffer: pointer to the input buffer (buffer to be hashed).
-  * @param  Size: length of the input buffer in bytes, must be a multiple of 4.
-  * @retval HAL status
-  */
-HAL_StatusTypeDef HAL_HASHEx_SHA256_Accumulate_IT(HASH_HandleTypeDef *hhash, uint8_t *pInBuffer, uint32_t Size)
-{
-  return  HASH_Accumulate_IT(hhash, pInBuffer, Size,HASH_ALGOSELECTION_SHA256);
 }
 
 /**
@@ -336,7 +301,7 @@ HAL_StatusTypeDef HAL_HASHEx_SHA256_Accumulate_IT(HASH_HandleTypeDef *hhash, uin
          (++) HAL_HASHEx_SHA256_Start_DMA()
          (++) HAL_HASHEx_SHA256_Finish()
 
-    [..]  When resorting to DMA mode to enter the data in the Peripheral, user must resort
+    [..]  When resorting to DMA mode to enter the data in the IP, user must resort
           to  HAL_HASHEx_xxx_Start_DMA() then read the resulting digest with
           HAL_HASHEx_xxx_Finish().
 
@@ -354,7 +319,7 @@ HAL_StatusTypeDef HAL_HASHEx_SHA256_Accumulate_IT(HASH_HandleTypeDef *hhash, uin
 
 /**
   * @brief  Initialize the HASH peripheral in SHA224 mode then initiate a DMA transfer
-  *         to feed the input buffer to the Peripheral.
+  *         to feed the input buffer to the IP.
   * @note   Once the DMA transfer is finished, HAL_HASHEx_SHA224_Finish() API must
   *         be called to retrieve the computed digest.
   * @param  hhash: HASH handle.
@@ -384,7 +349,7 @@ HAL_StatusTypeDef HAL_HASHEx_SHA224_Finish(HASH_HandleTypeDef *hhash, uint8_t* p
 
 /**
   * @brief  Initialize the HASH peripheral in SHA256 mode then initiate a DMA transfer
-  *         to feed the input buffer to the Peripheral.
+  *         to feed the input buffer to the IP.
   * @note   Once the DMA transfer is finished, HAL_HASHEx_SHA256_Finish() API must
   *         be called to retrieve the computed digest.
   * @param  hhash: HASH handle.
@@ -553,7 +518,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Start_IT(HASH_HandleTypeDef *hhash, uint8_t 
       (+) SHA256
          (++) HAL_HMACEx_SHA256_Start_DMA()
 
-    [..]  When resorting to DMA mode to enter the data in the Peripheral for HMAC processing,
+    [..]  When resorting to DMA mode to enter the data in the IP for HMAC processing,
           user must resort to  HAL_HMACEx_xxx_Start_DMA() then read the resulting digest
           with HAL_HASHEx_xxx_Finish().
 
@@ -566,7 +531,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Start_IT(HASH_HandleTypeDef *hhash, uint8_t 
 
 /**
   * @brief  Initialize the HASH peripheral in HMAC SHA224 mode then initiate the required
-  *         DMA transfers to feed the key and the input buffer to the Peripheral.
+  *         DMA transfers to feed the key and the input buffer to the IP.
   * @note   Once the DMA transfers are finished (indicated by hhash->State set back
   *         to HAL_HASH_STATE_READY), HAL_HASHEx_SHA224_Finish() API must be called to retrieve
   *         the computed digest.
@@ -590,7 +555,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA224_Start_DMA(HASH_HandleTypeDef *hhash, uint8_t
 
 /**
   * @brief  Initialize the HASH peripheral in HMAC SHA224 mode then initiate the required
-  *         DMA transfers to feed the key and the input buffer to the Peripheral.
+  *         DMA transfers to feed the key and the input buffer to the IP.
   * @note   Once the DMA transfers are finished (indicated by hhash->State set back
   *         to HAL_HASH_STATE_READY), HAL_HASHEx_SHA256_Finish() API must be called to retrieve
   *         the computed digest.
@@ -634,7 +599,6 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Start_DMA(HASH_HandleTypeDef *hhash, uint8_t
          (++) HAL_HMACEx_SHA1_Step1_2_DMA()
          (++) HAL_HMACEx_SHA1_Step2_DMA()
          (++) HAL_HMACEx_SHA1_Step2_3_DMA()
-
       (+) SHA256
          (++) HAL_HMACEx_SHA224_Step1_2_DMA()
          (++) HAL_HMACEx_SHA224_Step2_DMA()
@@ -648,13 +612,13 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Start_DMA(HASH_HandleTypeDef *hhash, uint8_t
           calling HAL_HMACEx_xxx_Step1_2_DMA(). This carries out HMAC step 1 and
           intiates step 2 with the first input buffer.
 
-    [..]  The following buffers are next fed to the Peripheral with a call to the API
+    [..]  The following buffers are next fed to the IP with a call to the API
           HAL_HMACEx_xxx_Step2_DMA(). There may be several consecutive calls
           to this API.
 
     [..]  Multi-buffer DMA-based HMAC computation is wrapped up by a call to
           HAL_HMACEx_xxx_Step2_3_DMA(). This finishes step 2 in feeding the last input
-          buffer to the Peripheral then carries out step 3.
+          buffer to the IP then carries out step 3.
 
     [..]  Digest is retrieved by a call to HAL_HASH_xxx_Finish() for MD-5 or
           SHA-1, to HAL_HASHEx_xxx_Finish() for SHA-224 or SHA-256.
@@ -669,10 +633,10 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Start_DMA(HASH_HandleTypeDef *hhash, uint8_t
 
 /**
   * @brief  MD5 HMAC step 1 completion and step 2 start in multi-buffer DMA mode.
-  * @note   Step 1 consists in writing the inner hash function key in the Peripheral,
+  * @note   Step 1 consists in writing the inner hash function key in the IP,
   *         step 2 consists in writing the message text.
   * @note   The API carries out the HMAC step 1 then starts step 2 with
-  *         the first buffer entered to the Peripheral. DCAL bit is not automatically set after
+  *         the first buffer entered to the IP. DCAL bit is not automatically set after
   *         the message buffer feeding, allowing other messages DMA transfers to occur.
   * @note   Same key is used for the inner and the outer hash functions; pointer to key and
   *         key size are respectively stored in hhash->Init.pKey and hhash->Init.KeySize.
@@ -691,7 +655,7 @@ HAL_StatusTypeDef HAL_HMACEx_MD5_Step1_2_DMA(HASH_HandleTypeDef *hhash, uint8_t 
 
 /**
   * @brief  MD5 HMAC step 2 in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral.
+  * @note   Step 2 consists in writing the message text in the IP.
   * @note   The API carries on the HMAC step 2, applied to the buffer entered as input
   *         parameter. DCAL bit is not automatically set after the message buffer feeding,
   *         allowing other messages DMA transfers to occur.
@@ -715,7 +679,7 @@ HAL_StatusTypeDef HAL_HMACEx_MD5_Step2_DMA(HASH_HandleTypeDef *hhash, uint8_t *p
 
 /**
   * @brief  MD5 HMAC step 2 wrap-up and step 3 completion in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral,
+  * @note   Step 2 consists in writing the message text in the IP,
   *         step 3 consists in writing the outer hash function key.
   * @note   The API wraps up the HMAC step 2 in processing the buffer entered as input
   *         parameter (the input buffer must be the last one of the multi-buffer thread)
@@ -739,10 +703,10 @@ HAL_StatusTypeDef HAL_HMACEx_MD5_Step2_3_DMA(HASH_HandleTypeDef *hhash, uint8_t 
 
 /**
   * @brief  SHA1 HMAC step 1 completion and step 2 start in multi-buffer DMA mode.
-  * @note   Step 1 consists in writing the inner hash function key in the Peripheral,
+  * @note   Step 1 consists in writing the inner hash function key in the IP,
   *         step 2 consists in writing the message text.
   * @note   The API carries out the HMAC step 1 then starts step 2 with
-  *         the first buffer entered to the Peripheral. DCAL bit is not automatically set after
+  *         the first buffer entered to the IP. DCAL bit is not automatically set after
   *         the message buffer feeding, allowing other messages DMA transfers to occur.
   * @note   Same key is used for the inner and the outer hash functions; pointer to key and
   *         key size are respectively stored in hhash->Init.pKey and hhash->Init.KeySize.
@@ -761,7 +725,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA1_Step1_2_DMA(HASH_HandleTypeDef *hhash, uint8_t
 
 /**
   * @brief  SHA1 HMAC step 2 in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral.
+  * @note   Step 2 consists in writing the message text in the IP.
   * @note   The API carries on the HMAC step 2, applied to the buffer entered as input
   *         parameter. DCAL bit is not automatically set after the message buffer feeding,
   *         allowing other messages DMA transfers to occur.
@@ -785,7 +749,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA1_Step2_DMA(HASH_HandleTypeDef *hhash, uint8_t *
 
 /**
   * @brief  SHA1 HMAC step 2 wrap-up and step 3 completion in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral,
+  * @note   Step 2 consists in writing the message text in the IP,
   *         step 3 consists in writing the outer hash function key.
   * @note   The API wraps up the HMAC step 2 in processing the buffer entered as input
   *         parameter (the input buffer must be the last one of the multi-buffer thread)
@@ -808,10 +772,10 @@ HAL_StatusTypeDef HAL_HMACEx_SHA1_Step2_3_DMA(HASH_HandleTypeDef *hhash, uint8_t
 
 /**
   * @brief  SHA224 HMAC step 1 completion and step 2 start in multi-buffer DMA mode.
-  * @note   Step 1 consists in writing the inner hash function key in the Peripheral,
+  * @note   Step 1 consists in writing the inner hash function key in the IP,
   *         step 2 consists in writing the message text.
   * @note   The API carries out the HMAC step 1 then starts step 2 with
-  *         the first buffer entered to the Peripheral. DCAL bit is not automatically set after
+  *         the first buffer entered to the IP. DCAL bit is not automatically set after
   *         the message buffer feeding, allowing other messages DMA transfers to occur.
   * @note   Same key is used for the inner and the outer hash functions; pointer to key and
   *         key size are respectively stored in hhash->Init.pKey and hhash->Init.KeySize.
@@ -830,7 +794,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA224_Step1_2_DMA(HASH_HandleTypeDef *hhash, uint8
 
 /**
   * @brief  SHA224 HMAC step 2 in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral.
+  * @note   Step 2 consists in writing the message text in the IP.
   * @note   The API carries on the HMAC step 2, applied to the buffer entered as input
   *         parameter. DCAL bit is not automatically set after the message buffer feeding,
   *         allowing other messages DMA transfers to occur.
@@ -854,7 +818,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA224_Step2_DMA(HASH_HandleTypeDef *hhash, uint8_t
 
 /**
   * @brief  SHA224 HMAC step 2 wrap-up and step 3 completion in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral,
+  * @note   Step 2 consists in writing the message text in the IP,
   *         step 3 consists in writing the outer hash function key.
   * @note   The API wraps up the HMAC step 2 in processing the buffer entered as input
   *         parameter (the input buffer must be the last one of the multi-buffer thread)
@@ -877,10 +841,10 @@ HAL_StatusTypeDef HAL_HMACEx_SHA224_Step2_3_DMA(HASH_HandleTypeDef *hhash, uint8
 
 /**
   * @brief  SHA256 HMAC step 1 completion and step 2 start in multi-buffer DMA mode.
-  * @note   Step 1 consists in writing the inner hash function key in the Peripheral,
+  * @note   Step 1 consists in writing the inner hash function key in the IP,
   *         step 2 consists in writing the message text.
   * @note   The API carries out the HMAC step 1 then starts step 2 with
-  *         the first buffer entered to the Peripheral. DCAL bit is not automatically set after
+  *         the first buffer entered to the IP. DCAL bit is not automatically set after
   *         the message buffer feeding, allowing other messages DMA transfers to occur.
   * @note   Same key is used for the inner and the outer hash functions; pointer to key and
   *         key size are respectively stored in hhash->Init.pKey and hhash->Init.KeySize.
@@ -899,7 +863,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Step1_2_DMA(HASH_HandleTypeDef *hhash, uint8
 
 /**
   * @brief  SHA256 HMAC step 2 in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral.
+  * @note   Step 2 consists in writing the message text in the IP.
   * @note   The API carries on the HMAC step 2, applied to the buffer entered as input
   *         parameter. DCAL bit is not automatically set after the message buffer feeding,
   *         allowing other messages DMA transfers to occur.
@@ -923,7 +887,7 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Step2_DMA(HASH_HandleTypeDef *hhash, uint8_t
 
 /**
   * @brief  SHA256 HMAC step 2 wrap-up and step 3 completion in multi-buffer DMA mode.
-  * @note   Step 2 consists in writing the message text in the Peripheral,
+  * @note   Step 2 consists in writing the message text in the IP,
   *         step 3 consists in writing the outer hash function key.
   * @note   The API wraps up the HMAC step 2 in processing the buffer entered as input
   *         parameter (the input buffer must be the last one of the multi-buffer thread)
@@ -948,20 +912,21 @@ HAL_StatusTypeDef HAL_HMACEx_SHA256_Step2_3_DMA(HASH_HandleTypeDef *hhash, uint8
   * @}
   */
 
-#endif /* MDMA defined*/
+
 /**
   * @}
   */
+
+/**
+  * @}
+  */
+
+/**
+  * @}
+  */
+
+#endif /* defined (STM32L4A6xx) || defined (STM32L4S5xx) || defined (STM32L4S7xx) || defined (STM32L4S9xx) */
+
 #endif /* HAL_HASH_MODULE_ENABLED */
-
-/**
-  * @}
-  */
-#endif /*  HASH*/
-/**
-  * @}
-  */
-
-
 
 /************************ (C) COPYRIGHT STMicroelectronics *****END OF FILE****/

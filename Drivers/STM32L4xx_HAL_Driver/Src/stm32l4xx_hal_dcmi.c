@@ -147,13 +147,29 @@
   ******************************************************************************
   * @attention
   *
-  * <h2><center>&copy; Copyright (c) 2017 STMicroelectronics.
-  * All rights reserved.</center></h2>
+  * <h2><center>&copy; COPYRIGHT(c) 2017 STMicroelectronics</center></h2>
   *
-  * This software component is licensed by ST under BSD 3-Clause license,
-  * the "License"; You may not use this file except in compliance with the
-  * License. You may obtain a copy of the License at:
-  *                        opensource.org/licenses/BSD-3-Clause
+  * Redistribution and use in source and binary forms, with or without modification,
+  * are permitted provided that the following conditions are met:
+  *   1. Redistributions of source code must retain the above copyright notice,
+  *      this list of conditions and the following disclaimer.
+  *   2. Redistributions in binary form must reproduce the above copyright notice,
+  *      this list of conditions and the following disclaimer in the documentation
+  *      and/or other materials provided with the distribution.
+  *   3. Neither the name of STMicroelectronics nor the names of its contributors
+  *      may be used to endorse or promote products derived from this software
+  *      without specific prior written permission.
+  *
+  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  * AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  * DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT HOLDER OR CONTRIBUTORS BE LIABLE
+  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR
+  * SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER
+  * CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
+  * OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
+  * OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
   *
   ******************************************************************************
   */
@@ -186,13 +202,17 @@
   * @}
   */
 
-#define NPRIME   16U
+#define NPRIME   16
 
 /**
   * @}
   */
 /* Private macro -------------------------------------------------------------*/
 /* Private variables ---------------------------------------------------------*/
+uint32_t PrimeArray[NPRIME] = { 1,  2,  3,  5,
+                                7, 11, 13, 17,
+                               19, 23, 29, 31,
+                               37, 41, 43, 47};
 /* Private function prototypes -----------------------------------------------*/
 /** @addtogroup DCMI_Private_Functions DCMI Private Functions
   * @{
@@ -466,7 +486,7 @@ __weak void HAL_DCMI_MspDeInit(DCMI_HandleTypeDef* hdcmi)
   */
 HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mode, uint32_t pData, uint32_t Length)
 {
-  uint32_t circular_copy_length;
+  uint32_t circular_copy_length = 0;
 
   /* Check capture parameter */
   assert_param(IS_DCMI_CAPTURE_MODE(DCMI_Mode));
@@ -489,7 +509,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
   /* Set the dma abort callback */
   hdcmi->DMA_Handle->XferAbortCallback = NULL;
 
-  if(Length <= 0xFFFFU)
+  if(Length <= 0xFFFF)
   {
     hdcmi->XferCount = 0; /* Mark as direct transfer from DCMI_DR register to final destination buffer */
 
@@ -523,7 +543,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
     circular_copy_length = DCMI_TransferSize(Length);
 
     /* Check if issue in intermediate length computation */
-    if (circular_copy_length == 0U)
+    if (circular_copy_length == 0)
     {
       /* Set state back to Ready */
       hdcmi->State = HAL_DCMI_STATE_READY;
@@ -535,9 +555,9 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
     }
 
     /* Store the number of half - intermediate buffer copies needed */
-    hdcmi->XferCount = 2U * ((Length / circular_copy_length) - 1U);
+    hdcmi->XferCount = 2 * ((Length / circular_copy_length) - 1);
     /* Store the half-buffer copy length */
-    hdcmi->HalfCopyLength = circular_copy_length / 2U;
+    hdcmi->HalfCopyLength = circular_copy_length / 2;
 
     /* DCMI DR samples in circular mode will be copied
        at the end of the final buffer.
@@ -546,7 +566,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
     hdcmi->pCircularBuffer = pData;
     /* Update pCircularBuffer in "moving" at the end of the final
        buffer, don't forger to convert in bytes to compute exact address */
-    hdcmi->pCircularBuffer +=  4U * (((Length / circular_copy_length) - 1U) * circular_copy_length);
+    hdcmi->pCircularBuffer +=  4 * (((Length / circular_copy_length) - 1) * circular_copy_length);
 
     /* Initiate the circular DMA transfer from DCMI IP to final buffer end */
     if ( HAL_DMA_Start_IT(hdcmi->DMA_Handle, (uint32_t)&hdcmi->Instance->DR, (uint32_t)hdcmi->pCircularBuffer, circular_copy_length) != HAL_OK)
@@ -582,7 +602,7 @@ HAL_StatusTypeDef HAL_DCMI_Start_DMA(DCMI_HandleTypeDef* hdcmi, uint32_t DCMI_Mo
   */
 HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef* hdcmi)
 {
-  uint32_t tickstart;
+  uint32_t tickstart = 0;
   HAL_StatusTypeDef status = HAL_OK;
 
   /* Process locked */
@@ -598,7 +618,7 @@ HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef* hdcmi)
   tickstart = HAL_GetTick();
 
   /* Check if the DCMI capture is effectively disabled */
-  while((hdcmi->Instance->CR & DCMI_CR_CAPTURE) != 0U)
+  while((hdcmi->Instance->CR & DCMI_CR_CAPTURE) != 0)
   {
     if((HAL_GetTick() - tickstart ) > DCMI_TIMEOUT_STOP)
     {
@@ -611,10 +631,7 @@ HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef* hdcmi)
   }
 
   /* Disable the DMA */
-  if (HAL_DMA_Abort(hdcmi->DMA_Handle) != HAL_OK)
-  {
-    DCMI_DMAError(hdcmi->DMA_Handle);
-  }
+  HAL_DMA_Abort(hdcmi->DMA_Handle);
 
   /* Disable DCMI IP */
   __HAL_DCMI_DISABLE(hdcmi);
@@ -637,7 +654,7 @@ HAL_StatusTypeDef HAL_DCMI_Stop(DCMI_HandleTypeDef* hdcmi)
   */
 HAL_StatusTypeDef HAL_DCMI_Suspend(DCMI_HandleTypeDef* hdcmi)
 {
-  uint32_t tickstart;
+  uint32_t tickstart = 0;
 
   /* Process locked */
   __HAL_LOCK(hdcmi);
@@ -654,7 +671,7 @@ HAL_StatusTypeDef HAL_DCMI_Suspend(DCMI_HandleTypeDef* hdcmi)
     tickstart = HAL_GetTick();
 
     /* Check if the DCMI capture is effectively disabled */
-    while((hdcmi->Instance->CR & DCMI_CR_CAPTURE) != 0U)
+    while((hdcmi->Instance->CR & DCMI_CR_CAPTURE) != 0)
     {
       if((HAL_GetTick() - tickstart ) > DCMI_TIMEOUT_STOP)
       {
@@ -716,7 +733,7 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
   uint32_t misflags = READ_REG(hdcmi->Instance->MISR);
 
   /* Synchronization error interrupt management *******************************/
-  if ((misflags & DCMI_MIS_ERR_MIS) != 0x0U)
+  if ((misflags & DCMI_MIS_ERR_MIS) != RESET)
   {
     /* Clear the Synchronization error flag */
     __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_ERRRI);
@@ -726,7 +743,7 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
   }
 
   /* Overflow interrupt management ********************************************/
-  if ((misflags & DCMI_MIS_OVR_MIS) != 0x0U)
+  if ((misflags & DCMI_MIS_OVR_MIS) != RESET)
   {
     /* Clear the Overflow flag */
     __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_OVRRI);
@@ -744,14 +761,11 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
     hdcmi->DMA_Handle->XferAbortCallback = DCMI_DMAError;
 
     /* Abort the DMA Transfer */
-    if (HAL_DMA_Abort_IT(hdcmi->DMA_Handle) != HAL_OK)
-    {
-      DCMI_DMAError(hdcmi->DMA_Handle);
-    }
+    HAL_DMA_Abort_IT(hdcmi->DMA_Handle);
   }
 
   /* Line Interrupt management ************************************************/
-  if ((misflags & DCMI_MIS_LINE_MIS) != 0x0U)
+  if ((misflags & DCMI_MIS_LINE_MIS) != RESET)
   {
     /* Clear the Line interrupt flag */
     __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_LINERI);
@@ -766,7 +780,7 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
   }
 
   /* VSYNC interrupt management ***********************************************/
-  if ((misflags & DCMI_MIS_VSYNC_MIS) != 0x0U)
+  if ((misflags & DCMI_MIS_VSYNC_MIS) != RESET)
   {
     /* Clear the VSYNC flag */
     __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_VSYNCRI);
@@ -781,7 +795,7 @@ void HAL_DCMI_IRQHandler(DCMI_HandleTypeDef *hdcmi)
   }
 
   /* End of Frame interrupt management ****************************************/
-  if ((misflags & DCMI_MIS_FRAME_MIS) != 0x0U)
+  if ((misflags & DCMI_MIS_FRAME_MIS) != RESET)
   {
     /* Disable the Line interrupt when using snapshot mode */
     if ((hdcmi->Instance->CR & DCMI_CR_CM) == DCMI_MODE_SNAPSHOT)
@@ -1066,7 +1080,7 @@ uint32_t HAL_DCMI_GetError(DCMI_HandleTypeDef *hdcmi)
   * @brief DCMI Callback registering
   * @param hdcmi        dcmi handle
   * @param CallbackID   dcmi Callback ID
-  * @param hdcmi        pointer to dcmi Callback function
+  * @param pCallback    pointer to dcmi Callback function
   * @retval status
   */
 HAL_StatusTypeDef HAL_DCMI_RegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCMI_CallbackIDTypeDef CallbackID, pDCMI_CallbackTypeDef pCallback)
@@ -1247,15 +1261,14 @@ HAL_StatusTypeDef HAL_DCMI_UnRegisterCallback(DCMI_HandleTypeDef *hdcmi, HAL_DCM
   */
 static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 {
-  uint32_t loop_length;     /* transfer length  */
-  uint32_t * tmpBuffer_Dest;
-  uint32_t * tmpBuffer_Orig;
-  uint32_t temp;
+  uint32_t loop_length       = 0;     /* transfer length  */
+  uint32_t * tmpBuffer_Dest  = NULL;
+  uint32_t * tmpBuffer_Orig  = NULL;
 
   DCMI_HandleTypeDef* hdcmi = ( DCMI_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
 
 
-  if(hdcmi->XferCount != 0U)
+  if(hdcmi->XferCount != 0)
   {
     /* Manage second half buffer copy in case of big transfer */
 
@@ -1267,15 +1280,13 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
 
     /* Point at DCMI circular buffer mid-location */
     tmpBuffer_Orig = (uint32_t *)hdcmi->pCircularBuffer;
-    temp = (uint32_t) (tmpBuffer_Orig);
-    temp += hdcmi->HalfCopyLength;
-    tmpBuffer_Orig = (uint32_t *) temp;
+    tmpBuffer_Orig +=  hdcmi->HalfCopyLength;
 
     /* copy half the buffer size */
     loop_length = hdcmi->HalfCopyLength;
 
     /* Save next entry to write at next half DMA transfer interruption */
-    hdcmi->pBuffPtr += (uint32_t) loop_length*4U;
+    hdcmi->pBuffPtr += (uint32_t) loop_length*4;
     hdcmi->XferSize -= hdcmi->HalfCopyLength;
 
     /* Data copy from work buffer to final destination buffer */
@@ -1303,10 +1314,10 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
   else
   {
     /* if End of frame IT is disabled */
-    if((hdcmi->Instance->IER & DCMI_IT_FRAME) == 0x0U)
+    if((hdcmi->Instance->IER & DCMI_IT_FRAME) == RESET)
     {
       /* If End of Frame flag is set */
-      if(__HAL_DCMI_GET_FLAG(hdcmi, (uint32_t)DCMI_FLAG_FRAMERI) != 0x0UL)
+      if(__HAL_DCMI_GET_FLAG(hdcmi, DCMI_FLAG_FRAMERI) != RESET)
       {
         /* Clear the End of Frame flag */
         __HAL_DCMI_CLEAR_FLAG(hdcmi, DCMI_FLAG_FRAMERI);
@@ -1348,13 +1359,13 @@ static void DCMI_DMAXferCplt(DMA_HandleTypeDef *hdma)
   */
 static void DCMI_DMAHalfXferCplt(DMA_HandleTypeDef *hdma)
 {
-  uint32_t loop_length;     /* transfer length  */
-  uint32_t * tmpBuffer_Dest;
-  uint32_t * tmpBuffer_Orig;
+  uint32_t loop_length       = 0;     /* transfer length  */
+  uint32_t * tmpBuffer_Dest  = NULL;
+  uint32_t * tmpBuffer_Orig  = NULL;
 
   DCMI_HandleTypeDef* hdcmi = ( DCMI_HandleTypeDef* )((DMA_HandleTypeDef* )hdma)->Parent;
 
-  if(hdcmi->XferCount != 0U)
+  if(hdcmi->XferCount != 0)
   {
     /* Manage first half buffer copy in case of big transfer */
 
@@ -1371,7 +1382,7 @@ static void DCMI_DMAHalfXferCplt(DMA_HandleTypeDef *hdma)
     loop_length = hdcmi->HalfCopyLength;
 
     /* Save next entry to write at next DMA transfer interruption */
-    hdcmi->pBuffPtr += (uint32_t) loop_length*4U;
+    hdcmi->pBuffPtr += (uint32_t) loop_length*4;
     hdcmi->XferSize -= hdcmi->HalfCopyLength;
 
     /* Data copy from work buffer to final destination buffer */
@@ -1442,10 +1453,6 @@ static uint32_t DCMI_TransferSize(uint32_t InputSize)
   uint32_t temp = InputSize;
   uint32_t aPrime[NPRIME] = {0};
   uint32_t output = 2; /* Want a result which is an even number */
-  uint32_t PrimeArray[NPRIME] = { 1UL,  2UL,  3UL,  5UL,
-                                7UL, 11UL, 13UL, 17UL,
-                               19UL, 23UL, 29UL, 31UL,
-                               37UL, 41UL, 43UL, 47UL};
 
 
   /* Develop InputSize in product of prime numbers */
@@ -1456,7 +1463,7 @@ static uint32_t DCMI_TransferSize(uint32_t InputSize)
     {
       break;
     }
-    while ((temp % PrimeArray[j]) == 0U)
+    while ((temp % PrimeArray[j]) == 0)
     {
       aPrime[j]++;
       temp /= PrimeArray[j];
@@ -1465,16 +1472,16 @@ static uint32_t DCMI_TransferSize(uint32_t InputSize)
   }
 
   /*  Search for the biggest even divisor less or equal to 0xFFFE = 65534 */
-  aPrime[1] -= 1U; /* output is initialized to 2, so don't count dividor 2 twice */
+  aPrime[1] -= 1; /* output is initialized to 2, so don't count dividor 2 twice */
 
    /*  The algorithm below yields a sub-optimal solution
        but in an acceptable time.  */
-    j =  NPRIME-1U;
-  while ((j > 0U) &&  (output <= 0xFFFEU))
+    j =  NPRIME-1;
+  while ((j > 0) &&  (output <= 0xFFFE))
   {
-    while (aPrime[j] > 0U)
+    while (aPrime[j] >0)
     {
-      if ((output * PrimeArray[j]) > 0xFFFEU)
+      if (output * PrimeArray[j] > 0xFFFE)
       {
         break;
       }
